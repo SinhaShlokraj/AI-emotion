@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI-Emotion_Detection – Live Emotion Detection</title>
+  <meta name="description" content="Real-time facial emotion detection powered by DeepFace AI. Detect your emotions through your webcam instantly."/>
+  <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ── Top Bar ── */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 2rem;
+      border-bottom: 1px solid var(--border-color);
+      background: var(--sidebar-bg);
+      backdrop-filter: blur(20px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .top-bar-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .top-bar-logo .logo-icon {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(59, 178, 184, 0.8), rgba(37, 99, 127, 0.85));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+    }
+    .top-bar-logo .logo-text { font-size: 1rem; font-weight: 800; }
+    .top-bar-logo .logo-sub { font-size: 0.65rem; color: var(--text-muted); }
+
+    .top-bar-actions {
+      display: flex; align-items: center; gap: 1rem;
+    }
+
+    /* ── Main Container ── */
+    .page-wrap {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    .detection-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+    .webcam-panel { display: flex; flex-direction: column; gap: 1rem; }
+    .results-panel { display: flex; flex-direction: column; gap: 1rem; }
+
+    .camera-placeholder {
+      aspect-ratio: 4/3;
+      background: rgba(0,0,0,0.4);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      color: var(--text-muted);
+    }
+
+    .controls-bar {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .dominant-display {
+      text-align: center;
+      padding: 2rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+    }
+    .dominant-emoji { font-size: 4rem; display: block; margin-bottom: 0.5rem; transition: var(--transition); }
+    .dominant-label { font-size: 0.75rem; color: var(--text-muted); }
+    .dominant-name { font-size: 1.5rem; font-weight: 800; text-transform: capitalize; }
+    .dominant-conf { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem; }
+
+    .live-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 100px;
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+    .live-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      animation: livePulse 1.5s ease-in-out infinite;
+    }
+    @keyframes livePulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
+    @media(max-width:768px) {
+      .detection-grid { grid-template-columns: 1fr; }
+      .page-wrap { padding: 1rem; }
+      .top-bar { padding: 0.75rem 1rem; }
+    }
+
+    video { transform: scaleX(-1); }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <div class="top-bar-logo">
+      <div class="logo-icon">🧠</div>
+      <div>
+        <div class="logo-text">AI-Emotion_Detection</div>
+        <div class="logo-sub">Live Emotion Detection</div>
+      </div>
+    </div>
+    <div class="top-bar-actions">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <label class="theme-switch">
+          <input type="checkbox" id="theme-toggle" />
+          <span class="theme-slider"></span>
+        </label>
+        <span class="theme-label">Dark mode</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="page-wrap">
+    <div class="page-header">
+      <h1 class="page-title">Live Detection 📷</h1>
+      <p class="page-subtitle">Detect your emotion in real-time using your webcam</p>
+    </div>
+
+    <div id="webcam-alert" style="display:none;" class="alert"></div>
+
+    <div class="detection-grid">
+      <!-- Webcam Panel -->
+      <div class="webcam-panel">
+        <div class="card" style="padding:1.25rem;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+            <h4 style="margin:0;">Camera Feed</h4>
+            <span class="live-indicator" id="live-badge" style="display:none;">
+              <span class="live-dot"></span> LIVE
+            </span>
+          </div>
+
+          <!-- Camera placeholder before start -->
+          <div id="camera-placeholder" class="camera-placeholder">
+            <span style="font-size:3rem;">📷</span>
+            <p style="font-size:0.9rem;">Click "Start Camera" to begin</p>
+          </div>
+
+          <!-- Video element -->
+          <div class="camera-container" id="camera-container" style="display:none;">
+            <video id="webcam-video" autoplay playsinline muted></video>
+            <canvas id="capture-canvas" style="display:none;"></canvas>
+          </div>
+
+          <div class="controls-bar" style="margin-top:1rem;">
+            <button class="btn btn-primary" id="start-btn" onclick="startCamera()">
+              ▶️ Start Camera
+            </button>
+            <button class="btn btn-secondary" id="stop-btn" onclick="stopCamera()" style="display:none;">
+              ⏹️ Stop
+            </button>
+            <button class="btn btn-outline" id="capture-btn" onclick="captureAndDetect()" disabled>
+              📸 Detect Emotion
+            </button>
+          </div>
+        </div>
+
+        <!-- Auto-detect option -->
+        <div class="card" style="padding:1.25rem;">
+          <h4 style="margin-bottom:0.75rem;">Auto-Detect</h4>
+          <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1rem;">
+            Automatically detect every few seconds
+          </p>
+          <div style="display:flex;gap:0.75rem;align-items:center;">
+            <button class="btn btn-outline btn-sm" id="auto-btn" onclick="toggleAutoDetect()" disabled>
+              🔄 Start Auto-Detect
+            </button>
+            <select class="form-input" id="auto-interval" style="width:auto;padding:0.5rem 0.75rem;font-size:0.8rem;">
+              <option value="3000">Every 3s</option>
+              <option value="5000" selected>Every 5s</option>
+              <option value="10000">Every 10s</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Panel -->
+      <div class="results-panel">
+        <!-- Dominant Emotion Display -->
+        <div class="dominant-display card">
+          <span class="dominant-emoji" id="result-emoji">😶</span>
+          <div class="dominant-label">Detected Emotion</div>
+          <div class="dominant-name" id="result-emotion">Waiting...</div>
+          <div class="dominant-conf" id="result-conf"></div>
+        </div>
+
+        <!-- Confidence Bars -->
+        <div class="card" style="padding:1.25rem;" id="bars-card">
+          <h4 style="margin-bottom:1rem;">Confidence Scores</h4>
+          <div class="emotion-bars" id="emotion-bars">
+            <div class="empty-state" style="padding:1rem;">
+              <p style="font-size:0.85rem;">Run detection to see confidence scores</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tips -->
+        <div id="webcam-tips" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/webcam.js"></script>
+</body>
+</html>
