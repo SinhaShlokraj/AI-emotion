@@ -19,7 +19,7 @@
     "fastapi",
     "frontend"
   ],
-  "author": "BLACKBOXAI",
+  "author": "Shlokraj Sinha",
   "license": "MIT",
   "devDependencies": {
     "concurrently": "^8.2.2",
