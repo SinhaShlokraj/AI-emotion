@@ -255,5 +255,3 @@ For issues and questions:
 - Read the documentation in the docs/ folder
 
 ---
-
-**Made with ❤️ for understanding and monitoring emotional well-being**
